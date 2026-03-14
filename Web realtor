@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>База ЖК и Застройщиков</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--tg-theme-bg-color, #f5f5f5);
+            color: var(--tg-theme-text-color, #000);
+            padding: 16px;
+        }
+        
+        .header {
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            background: white;
+            margin-bottom: 15px;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #3390ec;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #3390ec;
+            border-radius: 20px;
+            background: white;
+            color: #3390ec;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .filter-btn.active {
+            background: #3390ec;
+            color: white;
+        }
+        
+        .results-count {
+            color: #999;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+        
+        .project-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .developer {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .margin-badge {
+            background: #4CAF50;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .commissions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .comm-box {
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        .comm-input {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .comm-output {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            color: #999;
+        }
+        
+        .info-value {
+            font-weight: 500;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .site-link {
+            color: #3390ec;
+            text-decoration: none;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏢 База проектов</h1>
+        <input type="text" class="search-input" id="searchInput" placeholder="Поиск по ЖК, проекту, застройщику...">
+        
+        <div class="filters">
+            <button class="filter-btn active" data-filter="all">Все</button>
+            <button class="filter-btn" data-filter="Квартиры">Квартиры</button>
+            <button class="filter-btn" data-filter="Паркинг">Паркинг</button>
+            <button class="filter-btn" data-filter="Коммерция">Коммерция</button>
+        </div>
+    </div>
+    
+    <div class="results-count" id="resultsCount"></div>
+    <div id="results"></div>
+
+    <script>
+        // Инициализация Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        
+        // Ссылка на вашу Google Таблицу (CSV формат)
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRUVrU7_i_T3IokW-AawRbUh6bnvDRB4jqsFFcY3eMMdgpy6pEboe_4lv3HkenrKmn2PEchRLhvxjBs/pub?gid=1978136413&single=true&output=csv';
+        
+        let allData = [];
+        let currentFilter = 'all';
+        
+        // Загрузка данных
+        async function loadData() {
+            try {
+                const response = await fetch(SHEET_URL);
+                const csvText = await response.text();
+                parseCSV(csvText);
+            } catch (error) {
+                console.error('Ошибка загрузки:', error);
+                document.getElementById('results').innerHTML = 
+                    '<div class="no-results">⚠️ Ошибка загрузки данных. Проверьте ссылку на таблицу.</div>';
+            }
+        }
+        
+        // Парсинг CSV
+        function parseCSV(text) {
+            const lines = text.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            
+            allData = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                
+                const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                const row = {};
+                
+                headers.forEach((header, index) => {
+                    row[header] = values[index] || '';
+                });
+                
+                if (row['111 Проект'] || row['22 Застройщик']) {
+                    allData.push(row);
+                }
+            }
+            
+            console.log('Загружено записей:', allData.length);
+            renderResults(allData);
+        }
+        
+        // Фильтрация данных
+        function filterData() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            return allData.filter(row => {
+                const project = (row['111 Проект'] || '').toLowerCase();
+                const developer = (row['22 Застройщик'] || '').toLowerCase();
+                const supplier = (row['22 Поставщик'] || '').toLowerCase();
+                const city = (row['5 Город'] || '').toLowerCase();
+                const type = (row['10 Тип помещения'] || '').toLowerCase();
+                
+                // Поиск по тексту
+                const matchesSearch = project.includes(searchTerm) || 
+                                    developer.includes(searchTerm) || 
+                                    supplier.includes(searchTerm) ||
+                                    city.includes(searchTerm);
+                
+                if (!matchesSearch) return false;
+                
+                // Фильтр по типу
+                if (currentFilter === 'all') return true;
+                if (currentFilter === 'Квартиры') return type.includes('квартир');
+                if (currentFilter === 'Паркинг') return type.includes('паркинг');
+                if (currentFilter === 'Коммерция') return type.includes('коммерц');
+                
+                return true;
+            });
+        }
+        
+        // Отображение результатов
+        function renderResults(data) {
+            const container = document.getElementById('results');
+            const countElement = document.getElementById('resultsCount');
+            
+            countElement.textContent = `Найдено: ${data.length}`;
+            
+            if (data.length === 0) {
+                container.innerHTML = '<div class="no-results">Ничего не найдено</div>';
+                return;
+            }
+            
+            container.innerHTML = data.map(row => createCard(row)).join('');
+        }
+        
+        // Создание карточки
+        function createCard(row) {
+            const project = row['111 Проект'] || '—';
+            const developer = row['22 Застройщик'] || row['22 Поставщик'] || '—';
+            const city = row['5 Город'] || '—';
+            const type = row['10 Тип помещения'] || '—';
+            const site = row['Сайт'] || '#';
+            const inputComm = row['RedCat ВХОД От – До'] || '—';
+            const outputComm = row['RedCat ИСХОД От – До'] || '—';
+            const margin = row['МАРЖА'] || '—';
+            
+            return `
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <div class="project-name">${project}</div>
+                            <div class="developer">${developer}</div>
+                        </div>
+                        <div class="margin-badge">${margin}</div>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label"> Город:</span>
+                        <span class="info-value">${city}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">🏢 Тип:</span>
+                        <span class="info-value">${type}</span>
+                    </div>
+                    ${site !== '#' ? `
+                    <div class="info-row">
+                        <span class="info-label">🔗 Сайт:</span>
+                        <span class="info-value"><a href="${site}" class="site-link" target="_blank">Открыть</a></span>
+                    </div>
+                    ` : ''}
+                    
+                    <div class="commissions">
+                        <div class="comm-box comm-input">📥 Вход: ${inputComm}</div>
+                        <div class="comm-box comm-output">📤 Исход: ${outputComm}</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Обработчики событий
+        document.getElementById('searchInput').addEventListener('input', () => {
+            renderResults(filterData());
+        });
+        
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentFilter = this.dataset.filter;
+                renderResults(filterData());
+            });
+        });
+        
+        // Запуск при загрузке
+        loadData();
+    </script>
+</body>
+</html>
