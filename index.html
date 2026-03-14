@@ -74,32 +74,54 @@
         .card {
             background: white;
             border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
-        .project-name { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
-        .developer { color: #666; font-size: 14px; margin-bottom: 12px; }
-        .info-row {
+        .card-header {
             display: flex;
             justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 14px;
+            align-items: flex-start;
+            margin-bottom: 6px;
         }
-        .info-row:last-child { border-bottom: none; }
-        .info-label { color: #999; }
-        .info-value { font-weight: 500; }
-        .commissions { display: flex; gap: 8px; margin-top: 12px; }
+        .project-name {
+            font-size: 18px;
+            font-weight: bold;
+            flex: 1;
+        }
+        .developer {
+            color: #999;
+            font-size: 16px;
+            text-align: right;
+            margin-left: 12px;
+        }
+        .card-subtitle {
+            display: flex;
+            justify-content: space-between;
+            color: #999;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+        .commissions {
+            display: flex;
+            gap: 10px;
+        }
         .comm-box {
-            padding: 8px 12px;
+            flex: 1;
+            padding: 10px 12px;
             border-radius: 8px;
             font-size: 14px;
             font-weight: 600;
+            line-height: 1.3;
         }
-        .comm-input { background: #ffebee; color: #c62828; }
-        .comm-output { background: #e8f5e9; color: #2e7d32; }
-        .site-link { color: #3390ec; text-decoration: none; }
+        .comm-input { 
+            background: #e8f5e9; 
+            color: #2e7d32; 
+        }
+        .comm-output { 
+            background: #ffebee; 
+            color: #c62828; 
+        }
         .loading, .no-results { text-align: center; padding: 40px; color: #999; }
     </style>
 </head>
@@ -239,7 +261,6 @@
                 const developer = row.застройщик || row.поставщик || '—';
                 const city = row.город || '—';
                 const type = row.тип || '—';
-                const site = row.сайт || '';
                 
                 // Формируем Вход: объединяем От и До если оба есть
                 let inputComm = '—';
@@ -263,21 +284,14 @@
                 
                 return `
                     <div class="card">
-                        <div class="project-name">${project}</div>
-                        <div class="developer">${developer}</div>
-                        <div class="info-row">
-                            <span class="info-label">Город:</span>
-                            <span class="info-value">${city}</span>
+                        <div class="card-header">
+                            <div class="project-name">${project}</div>
+                            <div class="developer">${developer}</div>
                         </div>
-                        <div class="info-row">
-                            <span class="info-label">Тип:</span>
-                            <span class="info-value">${type}</span>
+                        <div class="card-subtitle">
+                            <span>${type}</span>
+                            <span>${city}</span>
                         </div>
-                        ${site ? `
-                        <div class="info-row">
-                            <span class="info-label">Сайт:</span>
-                            <span class="info-value"><a href="${site}" class="site-link" target="_blank">Открыть</a></span>
-                        </div>` : ''}
                         <div class="commissions">
                             <div class="comm-box comm-input">📥 Вход: ${inputComm}</div>
                             <div class="comm-box comm-output">📤 Исход: ${outputComm}</div>
