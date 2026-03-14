@@ -15,14 +15,44 @@
         }
         .header { margin-bottom: 20px; }
         .header h1 { font-size: 24px; margin-bottom: 15px; }
+        .search-container {
+            position: relative;
+            width: 100%;
+            margin-bottom: 15px;
+        }
         .search-input {
             width: 100%;
-            padding: 15px;
+            padding: 15px 45px 15px 15px;
             font-size: 16px;
             border: 2px solid #e0e0e0;
             border-radius: 12px;
             background: white;
-            margin-bottom: 15px;
+        }
+        .search-input:focus {
+            outline: none;
+            border-color: #3390ec;
+        }
+        .clear-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: #999;
+            color: white;
+            border-radius: 50%;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        .clear-btn.visible {
+            display: flex;
         }
         .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
         .filter-btn {
@@ -71,7 +101,10 @@
 <body>
     <div class="header">
         <h1>🏢 База проектов</h1>
-        <input type="text" class="search-input" id="searchInput" placeholder="Поиск по ЖК, проекту, застройщику...">
+        <div class="search-container">
+            <input type="text" class="search-input" id="searchInput" placeholder="Поиск по ЖК, проекту, застройщику...">
+            <button class="clear-btn" id="clearBtn">×</button>
+        </div>
         <div class="filters">
             <button class="filter-btn active" data-filter="all">Все</button>
             <button class="filter-btn" data-filter="Квартиры">Квартиры</button>
@@ -249,10 +282,37 @@
             }).join('');
         }
         
-        document.getElementById('searchInput').addEventListener('input', () => {
+        // Элементы
+        const searchInput = document.getElementById('searchInput');
+        const clearBtn = document.getElementById('clearBtn');
+        
+        // Показываем/скрываем кнопку очистки
+        searchInput.addEventListener('input', function() {
+            if (this.value.trim() !== '') {
+                clearBtn.classList.add('visible');
+            } else {
+                clearBtn.classList.remove('visible');
+            }
             renderResults(filterData());
         });
         
+        // Очистка поиска
+        clearBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            searchInput.value = '';
+            clearBtn.classList.remove('visible');
+            renderResults(filterData());
+            searchInput.focus();
+        });
+        
+        // Скрытие клавиатуры при тапе вне поля поиска
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !clearBtn.contains(e.target)) {
+                searchInput.blur();
+            }
+        });
+        
+        // Фильтры
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -262,6 +322,7 @@
             });
         });
         
+        // Загрузка данных
         loadData();
     </script>
 </body>
