@@ -203,19 +203,34 @@
                 const type = row.тип || '—';
                 const site = row.сайт || '';
                 
-                // Если значение уже содержит тире/диапазон - используем как есть
+                // Формируем Вход
                 let inputComm = '—';
-                if (row.входОт && (row.входОт.includes('–') || row.входОт.includes('-') || row.входОт.includes('—'))) {
-                    inputComm = row.входОт;
-                } else if (row.входОт) {
-                    inputComm = row.входОт;
+                if (row.входОт) {
+                    // Если уже есть диапазон с тире - берем как есть
+                    if (row.входОт.includes('–') || row.входОт.includes('—')) {
+                        inputComm = row.входОт;
+                    } else if (row.входДо && row.входДо.trim() !== '') {
+                        // Если есть две отдельные колонки - объединяем
+                        inputComm = `${row.входОт} – ${row.входДо}`;
+                    } else {
+                        // Только одно значение
+                        inputComm = row.входОт;
+                    }
                 }
                 
+                // Формируем Исход
                 let outputComm = '—';
-                if (row.исходОт && (row.исходОт.includes('–') || row.исходОт.includes('-') || row.исходОт.includes('—'))) {
-                    outputComm = row.исходОт;
-                } else if (row.исходОт) {
-                    outputComm = row.исходОт;
+                if (row.исходОт) {
+                    // Если уже есть диапазон с тире - берем как есть
+                    if (row.исходОт.includes('–') || row.исходОт.includes('—')) {
+                        outputComm = row.исходОт;
+                    } else if (row.исходДо && row.исходДо.trim() !== '') {
+                        // Если есть две отдельные колонки - объединяем
+                        outputComm = `${row.исходОт} – ${row.исходДо}`;
+                    } else {
+                        // Только одно значение
+                        outputComm = row.исходОт;
+                    }
                 }
                 
                 return `
