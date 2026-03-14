@@ -196,7 +196,7 @@
                 const type = row['10 Тип помещения'] || '—';
                 const site = row['Сайт'] || '';
                 
-                // Ищем ТОЛЬКО колонки RedCat ВХОД и RedCat ИСХОД
+                // Ищем ТОЛЬКО значения с процентами в колонках RedCat
                 const входЗначения = [];
                 const исходЗначения = [];
                 
@@ -204,29 +204,28 @@
                     const k = key.toLowerCase();
                     const val = row[key];
                     
-                    // Ищем именно RedCat ВХОД (должно содержать и "redcat" и "вход")
-                    if (val && k.includes('redcat') && k.includes('вход')) {
+                    // Проверяем что это колонка RedCat ВХОД и значение содержит %
+                    if (k.includes('redcat') && k.includes('вход') && val && val.includes('%')) {
                         входЗначения.push(val);
                     }
-                    // Ищем именно RedCat ИСХОД (должно содержать и "redcat" и "исход")
-                    if (val && k.includes('redcat') && k.includes('исход')) {
+                    // Проверяем что это колонка RedCat ИСХОД и значение содержит %
+                    if (k.includes('redcat') && k.includes('исход') && val && val.includes('%')) {
                         исходЗначения.push(val);
                     }
                 });
                 
-                // Убираем пустые значения
-                const входФильтр = входЗначения.filter(v => v);
-                const исходФильтр = исходЗначения.filter(v => v);
+                // Берем только уникальные значения
+                const входУник = [...new Set(входЗначения)];
+                const исходУник = [...new Set(исходЗначения)];
                 
-                // Объединяем через " – " если несколько значений
                 let inputComm = '—';
-                if (входФильтр.length > 0) {
-                    inputComm = входФильтр.join(' – ');
+                if (входУник.length > 0) {
+                    inputComm = входУник.join(' – ');
                 }
                 
                 let outputComm = '—';
-                if (исходФильтр.length > 0) {
-                    outputComm = исходФильтр.join(' – ');
+                if (исходУник.length > 0) {
+                    outputComm = исходУник.join(' – ');
                 }
                 
                 return `
