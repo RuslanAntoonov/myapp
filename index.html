@@ -108,7 +108,7 @@
             
             if (lines.length < 4) return;
             
-            // Объединяем первые 3 строки для заголовков (из-за переносов в Google Sheets)
+            // Объединяем первые 3 строки для заголовков
             const headerParts = [];
             for (let i = 0; i < 3; i++) {
                 headerParts.push(parseLine(lines[i]));
@@ -127,36 +127,30 @@
                 headers.push(header.trim().replace(/"/g, ''));
             }
             
-            console.log('Заголовки:', headers);
-            
-            // Данные начинаются с 4-й строки (индекс 3)
+            // Данные начинаются с 4-й строки
             allData = [];
             for (let i = 3; i < lines.length; i++) {
                 const values = parseLine(lines[i]);
                 
-                // Создаем объект с явными индексами колонок
                 const row = {
-                    поставщик: values[0] || '',           // A
-                    застройщик: values[1] || '',           // B
-                    проект: values[2] || '',               // C
-                    сайт: values[3] || '',                 // D
-                    город: values[4] || '',                // E
-                    тип: values[5] || '',                  // F
-                    повышайка: values[6] || '',            // G
-                    входОт: values[7] || '',               // H
-                    входДо: values[8] || '',               // I
-                    исходОт: values[9] || '',              // J
-                    исходДо: values[10] || ''              // K
+                    поставщик: values[0] || '',
+                    застройщик: values[1] || '',
+                    проект: values[2] || '',
+                    сайт: values[3] || '',
+                    город: values[4] || '',
+                    тип: values[5] || '',
+                    повышайка: values[6] || '',
+                    входОт: values[7] || '',
+                    входДо: values[8] || '',
+                    исходОт: values[9] || '',
+                    исходДо: values[10] || ''
                 };
                 
-                // Пропускаем пустые строки
                 if (row.проект || row.застройщик || row.поставщик) {
                     allData.push(row);
                 }
             }
             
-            console.log('Загружено записей:', allData.length);
-            console.log('Пример:', allData[0]);
             renderResults(allData);
         }
         
@@ -212,20 +206,30 @@
                 const type = row.тип || '—';
                 const site = row.сайт || '';
                 
-                // Формируем Вход: объединяем От и До если оба есть
+                // Формируем Вход - проверяем есть ли уже тире в значениях
                 let inputComm = '—';
-                if (row.входОт && row.входДо && row.входОт !== row.входДо) {
-                    inputComm = `${row.входОт} – ${row.входДо}`;
-                } else if (row.входОт) {
-                    inputComm = row.входОт;
+                if (row.входОт) {
+                    // Если значение уже содержит тире, используем как есть
+                    if (row.входОт.includes('–') || row.входОт.includes('-')) {
+                        inputComm = row.входОт;
+                    } else if (row.входДо && row.входОт !== row.входДо) {
+                        inputComm = `${row.входОт} – ${row.входДо}`;
+                    } else {
+                        inputComm = row.входОт;
+                    }
                 }
                 
-                // Формируем Исход: объединяем От и До если оба есть
+                // Формируем Исход - проверяем есть ли уже тире в значениях
                 let outputComm = '—';
-                if (row.исходОт && row.исходДо && row.исходОт !== row.исходДо) {
-                    outputComm = `${row.исходОт} – ${row.исходДо}`;
-                } else if (row.исходОт) {
-                    outputComm = row.исходОт;
+                if (row.исходОт) {
+                    // Если значение уже содержит тире, используем как есть
+                    if (row.исходОт.includes('–') || row.исходОт.includes('-')) {
+                        outputComm = row.исходОт;
+                    } else if (row.исходДо && row.исходОт !== row.исходДо) {
+                        outputComm = `${row.исходОт} – ${row.исходДо}`;
+                    } else {
+                        outputComm = row.исходОт;
+                    }
                 }
                 
                 return `
