@@ -66,6 +66,18 @@
         .comm-output { background: #e8f5e9; color: #2e7d32; }
         .site-link { color: #3390ec; text-decoration: none; }
         .loading, .no-results { text-align: center; padding: 40px; color: #999; }
+        .debug {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 11px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -80,6 +92,7 @@
         </div>
     </div>
     
+    <div id="debugOutput"></div>
     <div class="results-count" id="resultsCount"></div>
     <div id="results"></div>
 
@@ -106,13 +119,25 @@
         function parseCSV(text) {
             const lines = text.split('\n').map(line => line.trim()).filter(line => line);
             
-            // Пропускаем первую строку (заголовки), начинаем со второй
             if (lines.length < 2) return;
             
             const headers = parseLine(lines[0]);
+            const firstDataRow = parseLine(lines[1]);
+            
+            // Показываем отладку
+            let debugText = 'ПЕРВЫЕ 3 СТРОКИ CSV:\n';
+            for (let i = 0; i < Math.min(3, lines.length); i++) {
+                debugText += `\nСтрока ${i}: ${lines[i].substring(0, 200)}...\n`;
+            }
+            
+            debugText += '\n\nЗАГОЛОВКИ КОЛОНОК:\n';
+            headers.forEach((h, i) => {
+                debugText += `${i}: "${h}" => "${firstDataRow[i] || ''}"\n`;
+            });
+            
+            document.getElementById('debugOutput').innerHTML = `<div class="debug">${debugText}</div>`;
             
             allData = [];
-            // Начинаем с i=1 чтобы пропустить заголовки
             for (let i = 1; i < lines.length; i++) {
                 const values = parseLine(lines[i]);
                 const row = {};
@@ -120,7 +145,6 @@
                     row[h] = values[idx] || '';
                 });
                 
-                // Пропускаем пустые строки
                 if (row['111 Проект'] || row['22 Застройщик'] || row['22 Поставщик']) {
                     allData.push(row);
                 }
@@ -181,35 +205,34 @@
                 const type = row['10 Тип помещения'] || '—';
                 const site = row['Сайт'] || '';
                 
-                // Ищем колонки ВХОД (H и I) и ИСХОД (J и K)
-                const inputValues = [];
-                const outputValues = [];
+                // Собираем все значения содержащие "вход" и "исход"
+                const входЗначения = [];
+                const исходЗначения = [];
                 
                 Object.keys(row).forEach(key => {
                     const k = key.toLowerCase();
-                    // Ищем колонки с "вход" или "redcat" и "вход"
-                    if ((k.includes('вход') || (k.includes('redcat') && k.includes('вход'))) && row[key]) {
-                        inputValues.push(row[key]);
+                    const val = row[key];
+                    
+                    if (val && (k.includes('вход') || k.includes('redcat'))) {
+                        входЗначения.push(val);
                     }
-                    // Ищем колонки с "исход" или "redcat" и "исход"
-                    if ((k.includes('исход') || (k.includes('redcat') && k.includes('исход'))) && row[key]) {
-                        outputValues.push(row[key]);
+                    if (val && (k.includes('исход') || k.includes('redcat'))) {
+                        исходЗначения.push(val);
                     }
                 });
                 
-                // Формируем строки
+                // Убираем дубликаты
+                const входУник = [...new Set(входЗначения)];
+                const исходУник = [...new Set(исходЗначения)];
+                
                 let inputComm = '—';
-                if (inputValues.length >= 2 && inputValues[0] !== inputValues[1]) {
-                    inputComm = `${inputValues[0]} – ${inputValues[1]}`;
-                } else if (inputValues.length > 0) {
-                    inputComm = inputValues[0];
+                if (входУник.length > 0) {
+                    inputComm = входУник.filter(v => v).join(' – ') || '—';
                 }
                 
                 let outputComm = '—';
-                if (outputValues.length >= 2 && outputValues[0] !== outputValues[1]) {
-                    outputComm = `${outputValues[0]} – ${outputValues[1]}`;
-                } else if (outputValues.length > 0) {
-                    outputComm = outputValues[0];
+                if (исходУник.length > 0) {
+                    outputComm = исходУник.filter(v => v).join(' – ') || '—';
                 }
                 
                 return `
