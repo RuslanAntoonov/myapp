@@ -108,7 +108,7 @@
             
             if (lines.length < 4) return;
             
-            // Объединяем первые 3 строки для заголовков (из-за переносов в Google Sheets)
+            // Объединяем первые 3 строки для заголовков
             const headerParts = [];
             for (let i = 0; i < 3; i++) {
                 headerParts.push(parseLine(lines[i]));
@@ -127,9 +127,7 @@
                 headers.push(header.trim().replace(/"/g, ''));
             }
             
-            console.log('Итоговые заголовки:', headers);
-            
-            // Данные начинаются с 4-й строки (индекс 3)
+            // Данные начинаются с 4-й строки
             allData = [];
             for (let i = 3; i < lines.length; i++) {
                 const values = parseLine(lines[i]);
@@ -138,7 +136,6 @@
                     row[h] = values[idx] || '';
                 });
                 
-                // Пропускаем пустые строки
                 if (row['111 Проект'] || row['22 Застройщик'] || row['22 Поставщик']) {
                     allData.push(row);
                 }
@@ -199,7 +196,7 @@
                 const type = row['10 Тип помещения'] || '—';
                 const site = row['Сайт'] || '';
                 
-                // Ищем колонки ВХОД и ИСХОД
+                // Ищем ТОЛЬКО колонки RedCat ВХОД и RedCat ИСХОД
                 const входЗначения = [];
                 const исходЗначения = [];
                 
@@ -207,26 +204,29 @@
                     const k = key.toLowerCase();
                     const val = row[key];
                     
-                    if (val && k.includes('вход')) {
+                    // Ищем именно RedCat ВХОД (должно содержать и "redcat" и "вход")
+                    if (val && k.includes('redcat') && k.includes('вход')) {
                         входЗначения.push(val);
                     }
-                    if (val && k.includes('исход')) {
+                    // Ищем именно RedCat ИСХОД (должно содержать и "redcat" и "исход")
+                    if (val && k.includes('redcat') && k.includes('исход')) {
                         исходЗначения.push(val);
                     }
                 });
                 
-                // Убираем пустые и дубликаты
-                const входУник = [...new Set(входЗначения.filter(v => v))];
-                const исходУник = [...new Set(исходЗначения.filter(v => v))];
+                // Убираем пустые значения
+                const входФильтр = входЗначения.filter(v => v);
+                const исходФильтр = исходЗначения.filter(v => v);
                 
+                // Объединяем через " – " если несколько значений
                 let inputComm = '—';
-                if (входУник.length > 0) {
-                    inputComm = входУник.join(' – ');
+                if (входФильтр.length > 0) {
+                    inputComm = входФильтр.join(' – ');
                 }
                 
                 let outputComm = '—';
-                if (исходУник.length > 0) {
-                    outputComm = исходУник.join(' – ');
+                if (исходФильтр.length > 0) {
+                    outputComm = исходФильтр.join(' – ');
                 }
                 
                 return `
