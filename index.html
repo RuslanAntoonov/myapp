@@ -108,7 +108,7 @@
             
             if (lines.length < 4) return;
             
-            // Объединяем первые 3 строки для заголовков
+            // Объединяем первые 3 строки для заголовков (из-за переносов в Google Sheets)
             const headerParts = [];
             for (let i = 0; i < 3; i++) {
                 headerParts.push(parseLine(lines[i]));
@@ -127,20 +127,36 @@
                 headers.push(header.trim().replace(/"/g, ''));
             }
             
-            // Данные начинаются с 4-й строки
+            console.log('Заголовки:', headers);
+            
+            // Данные начинаются с 4-й строки (индекс 3)
             allData = [];
             for (let i = 3; i < lines.length; i++) {
                 const values = parseLine(lines[i]);
-                const row = {};
-                headers.forEach((h, idx) => {
-                    row[h] = values[idx] || '';
-                });
                 
-                if (row['111 Проект'] || row['22 Застройщик'] || row['22 Поставщик']) {
+                // Создаем объект с явными индексами колонок
+                const row = {
+                    поставщик: values[0] || '',           // A
+                    застройщик: values[1] || '',           // B
+                    проект: values[2] || '',               // C
+                    сайт: values[3] || '',                 // D
+                    город: values[4] || '',                // E
+                    тип: values[5] || '',                  // F
+                    повышайка: values[6] || '',            // G
+                    входОт: values[7] || '',               // H
+                    входДо: values[8] || '',               // I
+                    исходОт: values[9] || '',              // J
+                    исходДо: values[10] || ''              // K
+                };
+                
+                // Пропускаем пустые строки
+                if (row.проект || row.застройщик || row.поставщик) {
                     allData.push(row);
                 }
             }
             
+            console.log('Загружено записей:', allData.length);
+            console.log('Пример:', allData[0]);
             renderResults(allData);
         }
         
@@ -168,11 +184,11 @@
             const term = document.getElementById('searchInput').value.toLowerCase();
             
             return allData.filter(row => {
-                const text = Object.values(row).join(' ').toLowerCase();
+                const text = `${row.проект} ${row.застройщик} ${row.поставщик} ${row.город} ${row.тип}`.toLowerCase();
                 if (!text.includes(term)) return false;
                 
                 if (currentFilter === 'all') return true;
-                const type = (row['10 Тип помещения'] || '').toLowerCase();
+                const type = row.тип.toLowerCase();
                 if (currentFilter === 'Квартиры') return type.includes('квартир');
                 if (currentFilter === 'Паркинг') return type.includes('паркинг');
                 if (currentFilter === 'Коммерция') return type.includes('коммерц');
@@ -190,42 +206,26 @@
             }
             
             container.innerHTML = data.map(row => {
-                const project = row['111 Проект'] || '—';
-                const developer = row['22 Застройщик'] || row['22 Поставщик'] || '—';
-                const city = row['5 Город'] || '—';
-                const type = row['10 Тип помещения'] || '—';
-                const site = row['Сайт'] || '';
+                const project = row.проект || '—';
+                const developer = row.застройщик || row.поставщик || '—';
+                const city = row.город || '—';
+                const type = row.тип || '—';
+                const site = row.сайт || '';
                 
-                // Ищем ТОЛЬКО значения с процентами в колонках RedCat
-                const входЗначения = [];
-                const исходЗначения = [];
-                
-                Object.keys(row).forEach(key => {
-                    const k = key.toLowerCase();
-                    const val = row[key];
-                    
-                    // Проверяем что это колонка RedCat ВХОД и значение содержит %
-                    if (k.includes('redcat') && k.includes('вход') && val && val.includes('%')) {
-                        входЗначения.push(val);
-                    }
-                    // Проверяем что это колонка RedCat ИСХОД и значение содержит %
-                    if (k.includes('redcat') && k.includes('исход') && val && val.includes('%')) {
-                        исходЗначения.push(val);
-                    }
-                });
-                
-                // Берем только уникальные значения
-                const входУник = [...new Set(входЗначения)];
-                const исходУник = [...new Set(исходЗначения)];
-                
+                // Формируем Вход: объединяем От и До если оба есть
                 let inputComm = '—';
-                if (входУник.length > 0) {
-                    inputComm = входУник.join(' – ');
+                if (row.входОт && row.входДо && row.входОт !== row.входДо) {
+                    inputComm = `${row.входОт} – ${row.входДо}`;
+                } else if (row.входОт) {
+                    inputComm = row.входОт;
                 }
                 
+                // Формируем Исход: объединяем От и До если оба есть
                 let outputComm = '—';
-                if (исходУник.length > 0) {
-                    outputComm = исходУник.join(' – ');
+                if (row.исходОт && row.исходДо && row.исходОт !== row.исходДо) {
+                    outputComm = `${row.исходОт} – ${row.исходДо}`;
+                } else if (row.исходОт) {
+                    outputComm = row.исходОт;
                 }
                 
                 return `
