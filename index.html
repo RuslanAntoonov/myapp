@@ -105,18 +105,25 @@
         
         function parseCSV(text) {
             const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+            
+            // Пропускаем первую строку (заголовки), начинаем со второй
             if (lines.length < 2) return;
             
             const headers = parseLine(lines[0]);
             
             allData = [];
+            // Начинаем с i=1 чтобы пропустить заголовки
             for (let i = 1; i < lines.length; i++) {
                 const values = parseLine(lines[i]);
                 const row = {};
                 headers.forEach((h, idx) => {
                     row[h] = values[idx] || '';
                 });
-                allData.push(row);
+                
+                // Пропускаем пустые строки
+                if (row['111 Проект'] || row['22 Застройщик'] || row['22 Поставщик']) {
+                    allData.push(row);
+                }
             }
             
             renderResults(allData);
@@ -174,25 +181,35 @@
                 const type = row['10 Тип помещения'] || '—';
                 const site = row['Сайт'] || '';
                 
-                // Ищем 4 колонки: ВХОД (От и До), ИСХОД (От и До)
-                const входОт = findColumnValue(row, 'вход') || '';
-                const входДо = findColumnValue(row, 'вход', 1) || ''; // Вторая колонка с "вход"
-                const исходОт = findColumnValue(row, 'исход') || '';
-                const исходДо = findColumnValue(row, 'исход', 1) || ''; // Вторая колонка с "исход"
+                // Ищем колонки ВХОД (H и I) и ИСХОД (J и K)
+                const inputValues = [];
+                const outputValues = [];
                 
-                // Формируем строки Вход и Исход
+                Object.keys(row).forEach(key => {
+                    const k = key.toLowerCase();
+                    // Ищем колонки с "вход" или "redcat" и "вход"
+                    if ((k.includes('вход') || (k.includes('redcat') && k.includes('вход'))) && row[key]) {
+                        inputValues.push(row[key]);
+                    }
+                    // Ищем колонки с "исход" или "redcat" и "исход"
+                    if ((k.includes('исход') || (k.includes('redcat') && k.includes('исход'))) && row[key]) {
+                        outputValues.push(row[key]);
+                    }
+                });
+                
+                // Формируем строки
                 let inputComm = '—';
-                if (входОт && входДо && входОт !== входДо) {
-                    inputComm = `${входОт} – ${входДо}`;
-                } else if (входОт) {
-                    inputComm = входОт;
+                if (inputValues.length >= 2 && inputValues[0] !== inputValues[1]) {
+                    inputComm = `${inputValues[0]} – ${inputValues[1]}`;
+                } else if (inputValues.length > 0) {
+                    inputComm = inputValues[0];
                 }
                 
                 let outputComm = '—';
-                if (исходОт && исходДо && исходОт !== исходДо) {
-                    outputComm = `${исходОт} – ${исходДо}`;
-                } else if (исходОт) {
-                    outputComm = исходОт;
+                if (outputValues.length >= 2 && outputValues[0] !== outputValues[1]) {
+                    outputComm = `${outputValues[0]} – ${outputValues[1]}`;
+                } else if (outputValues.length > 0) {
+                    outputComm = outputValues[0];
                 }
                 
                 return `
@@ -219,17 +236,6 @@
                     </div>
                 `;
             }).join('');
-        }
-        
-        // Ищет значения в колонках (может найти несколько колонок с одинаковым словом)
-        function findColumnValue(row, keyword, index = 0) {
-            const matches = [];
-            Object.keys(row).forEach(key => {
-                if (key.toLowerCase().includes(keyword) && row[key]) {
-                    matches.push(row[key]);
-                }
-            });
-            return matches[index] || '';
         }
         
         document.getElementById('searchInput').addEventListener('input', () => {
