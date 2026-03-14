@@ -203,9 +203,25 @@
                 const type = row.тип || '—';
                 const site = row.сайт || '';
                 
-                // Просто берем значение из первой колонки (там уже есть диапазон если нужен)
-                const inputComm = row.входОт || '—';
-                const outputComm = row.исходОт || '—';
+                // Формируем Вход: объединяем От и До если оба есть
+                let inputComm = '—';
+                if (row.входОт && row.входДо && row.входОт.trim() !== '' && row.входДо.trim() !== '') {
+                    inputComm = `${row.входОт} – ${row.входДо}`;
+                } else if (row.входОт && row.входОт.trim() !== '') {
+                    inputComm = row.входОт;
+                } else if (row.входДо && row.входДо.trim() !== '') {
+                    inputComm = row.входДо;
+                }
+                
+                // Формируем Исход: объединяем От и До если оба есть
+                let outputComm = '—';
+                if (row.исходОт && row.исходДо && row.исходОт.trim() !== '' && row.исходДо.trim() !== '') {
+                    outputComm = `${row.исходОт} – ${row.исходДо}`;
+                } else if (row.исходОт && row.исходОт.trim() !== '') {
+                    outputComm = row.исходОт;
+                } else if (row.исходДо && row.исходДо.trim() !== '') {
+                    outputComm = row.исходДо;
+                }
                 
                 return `
                     <div class="card">
