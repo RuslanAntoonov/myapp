@@ -66,18 +66,6 @@
         .comm-output { background: #e8f5e9; color: #2e7d32; }
         .site-link { color: #3390ec; text-decoration: none; }
         .loading, .no-results { text-align: center; padding: 40px; color: #999; }
-        .debug {
-            background: #fff3cd;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            font-size: 11px;
-            font-family: monospace;
-            white-space: pre-wrap;
-            word-break: break-all;
-            max-height: 200px;
-            overflow-y: auto;
-        }
     </style>
 </head>
 <body>
@@ -92,7 +80,6 @@
         </div>
     </div>
     
-    <div id="debugOutput"></div>
     <div class="results-count" id="resultsCount"></div>
     <div id="results"></div>
 
@@ -119,32 +106,39 @@
         function parseCSV(text) {
             const lines = text.split('\n').map(line => line.trim()).filter(line => line);
             
-            if (lines.length < 2) return;
+            if (lines.length < 4) return;
             
-            const headers = parseLine(lines[0]);
-            const firstDataRow = parseLine(lines[1]);
-            
-            // Показываем отладку
-            let debugText = 'ПЕРВЫЕ 3 СТРОКИ CSV:\n';
-            for (let i = 0; i < Math.min(3, lines.length); i++) {
-                debugText += `\nСтрока ${i}: ${lines[i].substring(0, 200)}...\n`;
+            // Объединяем первые 3 строки для заголовков (из-за переносов в Google Sheets)
+            const headerParts = [];
+            for (let i = 0; i < 3; i++) {
+                headerParts.push(parseLine(lines[i]));
             }
             
-            debugText += '\n\nЗАГОЛОВКИ КОЛОНОК:\n';
-            headers.forEach((h, i) => {
-                debugText += `${i}: "${h}" => "${firstDataRow[i] || ''}"\n`;
-            });
+            // Объединяем заголовки по колонкам
+            const maxCols = Math.max(...headerParts.map(p => p.length));
+            const headers = [];
+            for (let i = 0; i < maxCols; i++) {
+                let header = '';
+                for (let j = 0; j < 3; j++) {
+                    if (headerParts[j][i]) {
+                        header += (header ? ' ' : '') + headerParts[j][i];
+                    }
+                }
+                headers.push(header.trim().replace(/"/g, ''));
+            }
             
-            document.getElementById('debugOutput').innerHTML = `<div class="debug">${debugText}</div>`;
+            console.log('Итоговые заголовки:', headers);
             
+            // Данные начинаются с 4-й строки (индекс 3)
             allData = [];
-            for (let i = 1; i < lines.length; i++) {
+            for (let i = 3; i < lines.length; i++) {
                 const values = parseLine(lines[i]);
                 const row = {};
                 headers.forEach((h, idx) => {
                     row[h] = values[idx] || '';
                 });
                 
+                // Пропускаем пустые строки
                 if (row['111 Проект'] || row['22 Застройщик'] || row['22 Поставщик']) {
                     allData.push(row);
                 }
@@ -205,7 +199,7 @@
                 const type = row['10 Тип помещения'] || '—';
                 const site = row['Сайт'] || '';
                 
-                // Собираем все значения содержащие "вход" и "исход"
+                // Ищем колонки ВХОД и ИСХОД
                 const входЗначения = [];
                 const исходЗначения = [];
                 
@@ -213,26 +207,26 @@
                     const k = key.toLowerCase();
                     const val = row[key];
                     
-                    if (val && (k.includes('вход') || k.includes('redcat'))) {
+                    if (val && k.includes('вход')) {
                         входЗначения.push(val);
                     }
-                    if (val && (k.includes('исход') || k.includes('redcat'))) {
+                    if (val && k.includes('исход')) {
                         исходЗначения.push(val);
                     }
                 });
                 
-                // Убираем дубликаты
-                const входУник = [...new Set(входЗначения)];
-                const исходУник = [...new Set(исходЗначения)];
+                // Убираем пустые и дубликаты
+                const входУник = [...new Set(входЗначения.filter(v => v))];
+                const исходУник = [...new Set(исходЗначения.filter(v => v))];
                 
                 let inputComm = '—';
                 if (входУник.length > 0) {
-                    inputComm = входУник.filter(v => v).join(' – ') || '—';
+                    inputComm = входУник.join(' – ');
                 }
                 
                 let outputComm = '—';
                 if (исходУник.length > 0) {
-                    outputComm = исходУник.filter(v => v).join(' – ') || '—';
+                    outputComm = исходУник.join(' – ');
                 }
                 
                 return `
