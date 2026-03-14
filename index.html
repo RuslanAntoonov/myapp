@@ -108,13 +108,11 @@
             
             if (lines.length < 4) return;
             
-            // Объединяем первые 3 строки для заголовков
             const headerParts = [];
             for (let i = 0; i < 3; i++) {
                 headerParts.push(parseLine(lines[i]));
             }
             
-            // Объединяем заголовки по колонкам
             const maxCols = Math.max(...headerParts.map(p => p.length));
             const headers = [];
             for (let i = 0; i < maxCols; i++) {
@@ -127,7 +125,6 @@
                 headers.push(header.trim().replace(/"/g, ''));
             }
             
-            // Данные начинаются с 4-й строки
             allData = [];
             for (let i = 3; i < lines.length; i++) {
                 const values = parseLine(lines[i]);
@@ -206,30 +203,19 @@
                 const type = row.тип || '—';
                 const site = row.сайт || '';
                 
-                // Формируем Вход - проверяем есть ли уже тире в значениях
+                // Если значение уже содержит тире/диапазон - используем как есть
                 let inputComm = '—';
-                if (row.входОт) {
-                    // Если значение уже содержит тире, используем как есть
-                    if (row.входОт.includes('–') || row.входОт.includes('-')) {
-                        inputComm = row.входОт;
-                    } else if (row.входДо && row.входОт !== row.входДо) {
-                        inputComm = `${row.входОт} – ${row.входДо}`;
-                    } else {
-                        inputComm = row.входОт;
-                    }
+                if (row.входОт && (row.входОт.includes('–') || row.входОт.includes('-') || row.входОт.includes('—'))) {
+                    inputComm = row.входОт;
+                } else if (row.входОт) {
+                    inputComm = row.входОт;
                 }
                 
-                // Формируем Исход - проверяем есть ли уже тире в значениях
                 let outputComm = '—';
-                if (row.исходОт) {
-                    // Если значение уже содержит тире, используем как есть
-                    if (row.исходОт.includes('–') || row.исходОт.includes('-')) {
-                        outputComm = row.исходОт;
-                    } else if (row.исходДо && row.исходОт !== row.исходДо) {
-                        outputComm = `${row.исходОт} – ${row.исходДо}`;
-                    } else {
-                        outputComm = row.исходОт;
-                    }
+                if (row.исходОт && (row.исходОт.includes('–') || row.исходОт.includes('-') || row.исходОт.includes('—'))) {
+                    outputComm = row.исходОт;
+                } else if (row.исходОт) {
+                    outputComm = row.исходОт;
                 }
                 
                 return `
