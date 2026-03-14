@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>База ЖК и Застройщиков</title>
+    <title>База ЖК</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * {
@@ -36,11 +36,6 @@
             border-radius: 12px;
             background: white;
             margin-bottom: 15px;
-        }
-        
-        .search-input:focus {
-            outline: none;
-            border-color: #3390ec;
         }
         
         .filters {
@@ -79,13 +74,6 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: start;
-            margin-bottom: 10px;
-        }
-        
         .project-name {
             font-size: 18px;
             font-weight: bold;
@@ -95,39 +83,7 @@
         .developer {
             color: #666;
             font-size: 14px;
-        }
-        
-        .margin-badge {
-            background: #4CAF50;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 14px;
-        }
-        
-        .commissions {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-            flex-wrap: wrap;
-        }
-        
-        .comm-box {
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-        
-        .comm-input {
-            background: #ffebee;
-            color: #c62828;
-        }
-        
-        .comm-output {
-            background: #e8f5e9;
-            color: #2e7d32;
+            margin-bottom: 12px;
         }
         
         .info-row {
@@ -150,32 +106,38 @@
             font-weight: 500;
         }
         
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #999;
+        .commissions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
         }
         
-        .no-results {
-            text-align: center;
-            padding: 40px;
-            color: #999;
+        .comm-box {
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .comm-input {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .comm-output {
+            background: #e8f5e9;
+            color: #2e7d32;
         }
         
         .site-link {
             color: #3390ec;
             text-decoration: none;
-            word-break: break-all;
         }
         
-        .debug-info {
-            background: #fff3cd;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            font-size: 12px;
-            font-family: monospace;
-            overflow-x: auto;
+        .loading, .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #999;
         }
     </style>
 </head>
@@ -183,7 +145,6 @@
     <div class="header">
         <h1>🏢 База проектов</h1>
         <input type="text" class="search-input" id="searchInput" placeholder="Поиск по ЖК, проекту, застройщику...">
-        
         <div class="filters">
             <button class="filter-btn active" data-filter="all">Все</button>
             <button class="filter-btn" data-filter="Квартиры">Квартиры</button>
@@ -200,7 +161,6 @@
         tg.ready();
         tg.expand();
         
-        // Ссылка на Google Таблицу в формате CSV
         const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRUVrU7_i_T3IokW-AawRbUh6bnvDRB4jqsFFcY3eMMdgpy6pEboe_4lv3HkenrKmn2PEchRLhvxjBs/pub?gid=1978136413&single=true&output=csv';
         
         let allData = [];
@@ -212,58 +172,36 @@
                 const csvText = await response.text();
                 parseCSV(csvText);
             } catch (error) {
-                console.error('Ошибка загрузки:', error);
-                document.getElementById('results').innerHTML = 
-                    '<div class="no-results">⚠️ Ошибка загрузки данных</div>';
+                document.getElementById('results').innerHTML = '<div class="no-results">⚠️ Ошибка загрузки</div>';
             }
         }
         
         function parseCSV(text) {
             const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+            if (lines.length < 2) return;
             
-            if (lines.length < 2) {
-                document.getElementById('results').innerHTML = 
-                    '<div class="no-results">⚠️ Таблица пуста или неверный формат</div>';
-                return;
-            }
-            
-            // Парсим заголовки
-            const headers = parseCSVLine(lines[0]).map(h => h.trim());
-            
-            console.log('Заголовки колонок:', headers);
+            const headers = parseLine(lines[0]);
             
             allData = [];
-            
-            // Парсим данные
             for (let i = 1; i < lines.length; i++) {
-                const values = parseCSVLine(lines[i]);
+                const values = parseLine(lines[i]);
                 const row = {};
-                
-                headers.forEach((header, index) => {
-                    row[header] = values[index] ? values[index].trim() : '';
+                headers.forEach((h, idx) => {
+                    row[h] = values[idx] || '';
                 });
-                
-                // Добавляем только если есть проект или застройщик
-                if (Object.values(row).some(val => val && val.length > 0)) {
-                    allData.push(row);
-                }
+                allData.push(row);
             }
-            
-            console.log('Загружено записей:', allData.length);
-            console.log('Пример данных:', allData[0]);
             
             renderResults(allData);
         }
         
-        // Улучшенный парсер CSV линии (учитывает кавычки и запятые внутри ячеек)
-        function parseCSVLine(line) {
+        function parseLine(line) {
             const result = [];
             let current = '';
             let inQuotes = false;
             
             for (let i = 0; i < line.length; i++) {
                 const char = line[i];
-                
                 if (char === '"') {
                     inQuotes = !inQuotes;
                 } else if (char === ',' && !inQuotes) {
@@ -273,112 +211,89 @@
                     current += char;
                 }
             }
-            
             result.push(current.trim());
             return result;
         }
         
         function filterData() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const term = document.getElementById('searchInput').value.toLowerCase();
             
             return allData.filter(row => {
-                // Ищем по всем значениям в строке
-                const searchText = Object.values(row).join(' ').toLowerCase();
-                const matchesSearch = searchText.includes(searchTerm);
+                const text = Object.values(row).join(' ').toLowerCase();
+                if (!text.includes(term)) return false;
                 
-                if (!matchesSearch) return false;
-                
-                // Фильтр по типу помещения
                 if (currentFilter === 'all') return true;
-                
                 const type = (row['10 Тип помещения'] || '').toLowerCase();
-                
                 if (currentFilter === 'Квартиры') return type.includes('квартир');
                 if (currentFilter === 'Паркинг') return type.includes('паркинг');
                 if (currentFilter === 'Коммерция') return type.includes('коммерц');
-                
                 return true;
             });
         }
         
         function renderResults(data) {
             const container = document.getElementById('results');
-            const countElement = document.getElementById('resultsCount');
-            
-            countElement.textContent = `Найдено: ${data.length}`;
+            document.getElementById('resultsCount').textContent = `Найдено: ${data.length}`;
             
             if (data.length === 0) {
                 container.innerHTML = '<div class="no-results">Ничего не найдено</div>';
                 return;
             }
             
-            container.innerHTML = data.map(row => createCard(row)).join('');
-        }
-        
-        function createCard(row) {
-            // Получаем данные из таблицы
-            const project = row['111 Проект'] || '—';
-            const developer = row['22 Застройщик'] || row['22 Поставщик'] || '—';
-            const city = row['5 Город'] || '—';
-            const type = row['10 Тип помещения'] || '—';
-            const site = row['Сайт'] || '';
-            
-            // Ищем колонки с комиссиями (пробуем разные варианты названий)
-            let inputComm = '—';
-            let outputComm = '—';
-            let margin = '—';
-            
-            // Ищем колонки по ключевым словам
-            Object.keys(row).forEach(key => {
-                const keyLower = key.toLowerCase();
+            container.innerHTML = data.map(row => {
+                const project = row['111 Проект'] || '—';
+                const developer = row['22 Застройщик'] || row['22 Поставщик'] || '—';
+                const city = row['5 Город'] || '—';
+                const type = row['10 Тип помещения'] || '—';
+                const site = row['Сайт'] || '';
                 
-                if (keyLower.includes('вход') || keyLower.includes('redcat') && keyLower.includes('вход')) {
-                    inputComm = row[key] || '—';
-                }
+                // Ищем все колонки с ВХОД и ИСХОД
+                const inputCols = [];
+                const outputCols = [];
                 
-                if (keyLower.includes('исход') || keyLower.includes('redcat') && keyLower.includes('исход')) {
-                    outputComm = row[key] || '—';
-                }
+                Object.keys(row).forEach(key => {
+                    const k = key.toLowerCase();
+                    if (k.includes('вход') && row[key]) {
+                        inputCols.push(row[key]);
+                    }
+                    if (k.includes('исход') && row[key]) {
+                        outputCols.push(row[key]);
+                    }
+                });
                 
-                if (keyLower.includes('маржа')) {
-                    margin = row[key] || '—';
-                }
-            });
-            
-            return `
-                <div class="card">
-                    <div class="card-header">
-                        <div>
-                            <div class="project-name">${project}</div>
-                            <div class="developer">${developer}</div>
+                // Объединяем значения (берем первые 2 для каждого)
+                const inputComm = inputCols.length > 0 ? 
+                    (inputCols[0] && inputCols[1] ? `${inputCols[0]} – ${inputCols[1]}` : inputCols[0] || '—') : '—';
+                
+                const outputComm = outputCols.length > 0 ? 
+                    (outputCols[0] && outputCols[1] ? `${outputCols[0]} – ${outputCols[1]}` : outputCols[0] || '—') : '—';
+                
+                return `
+                    <div class="card">
+                        <div class="project-name">${project}</div>
+                        <div class="developer">${developer}</div>
+                        <div class="info-row">
+                            <span class="info-label">Город:</span>
+                            <span class="info-value">${city}</span>
                         </div>
-                        <div class="margin-badge">Маржа: ${margin}</div>
+                        <div class="info-row">
+                            <span class="info-label">Тип:</span>
+                            <span class="info-value">${type}</span>
+                        </div>
+                        ${site ? `
+                        <div class="info-row">
+                            <span class="info-label">Сайт:</span>
+                            <span class="info-value"><a href="${site}" class="site-link" target="_blank">Открыть</a></span>
+                        </div>` : ''}
+                        <div class="commissions">
+                            <div class="comm-box comm-input">📥 Вход: ${inputComm}</div>
+                            <div class="comm-box comm-output">📤 Исход: ${outputComm}</div>
+                        </div>
                     </div>
-                    
-                    <div class="info-row">
-                        <span class="info-label"> Город:</span>
-                        <span class="info-value">${city}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">🏢 Тип:</span>
-                        <span class="info-value">${type}</span>
-                    </div>
-                    ${site ? `
-                    <div class="info-row">
-                        <span class="info-label">🔗 Сайт:</span>
-                        <span class="info-value"><a href="${site}" class="site-link" target="_blank">Открыть</a></span>
-                    </div>
-                    ` : ''}
-                    
-                    <div class="commissions">
-                        <div class="comm-box comm-input">📥 Вход: ${inputComm}</div>
-                        <div class="comm-box comm-output">📤 Исход: ${outputComm}</div>
-                    </div>
-                </div>
-            `;
+                `;
+            }).join('');
         }
         
-        // Обработчики фильтров
         document.getElementById('searchInput').addEventListener('input', () => {
             renderResults(filterData());
         });
@@ -392,7 +307,6 @@
             });
         });
         
-        // Загружаем данные
         loadData();
     </script>
 </body>
